@@ -1,16 +1,14 @@
-
-// Initial sample items with image placeholders
 let items = JSON.parse(localStorage.getItem("items")) || [
-    { id: 1, title: "Black Backpack", claimed: false, image: "https://picsum.photos/id/160/200" },
-    { id: 2, title: "AirPods Case", claimed: false, image: "https://picsum.photos/id/1/200" },
-    { id: 3, title: "Calculator", claimed: false, image: "https://picsum.photos/id/20/200" },
-    { id: 4, title: "Water Bottle", claimed: false, image: "https://picsum.photos/id/429/200" },
-    { id: 5, title: "Notebook", claimed: false, image: "https://picsum.photos/id/24/200" },
-    { id: 6, title: "Phone Charger", claimed: false, image: "https://picsum.photos/id/0/200" },
-    { id: 7, title: "Sunglasses", claimed: false, image: "https://picsum.photos/id/64/200" },
-    { id: 8, title: "Keychain", claimed: false, image: "https://picsum.photos/id/119/200" },
-    { id: 9, title: "Umbrella", claimed: false, image: "https://picsum.photos/id/1059/200" },
-    { id: 10, title: "Lunchbox", claimed: false, image: "https://picsum.photos/id/488/200" }
+    { id: 1, title: "Black Backpack", claimed: false, image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=300" },
+    { id: 2, title: "AirPods Case", claimed: false, image: "https://images.unsplash.com/photo-1588423770674-f285514035b3?w=300" },
+    { id: 3, title: "Calculator", claimed: false, image: "https://images.unsplash.com/photo-1574607383476-f517f220d398?w=300" },
+    { id: 4, title: "Water Bottle", claimed: false, image: "https://images.unsplash.com/photo-1523362622602-deba56a2f90a?w=300" },
+    { id: 5, title: "Notebook", claimed: false, image: "https://images.unsplash.com/photo-1531346878377-a5be20888e57?w=300" },
+    { id: 6, title: "Phone Charger", claimed: false, image: "https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=300" },
+    { id: 7, title: "Sunglasses", claimed: false, image: "https://images.unsplash.com/photo-1511499767350-a15104643f14?w=300" },
+    { id: 8, title: "Keychain", claimed: false, image: "https://images.unsplash.com/photo-1582142839970-2b9e04b60f65?w=300" },
+    { id: 9, title: "Umbrella", claimed: false, image: "https://images.unsplash.com/photo-1522441815192-d9f04eb0615c?w=300" },
+    { id: 10, title: "Lunchbox", claimed: false, image: "https://images.unsplash.com/photo-1623156346149-d5bc8bd27094?w=300" }
 ];
 
 let claims = JSON.parse(localStorage.getItem("claims")) || [];
@@ -76,20 +74,27 @@ function renderItems() {
 
         const wrapper = document.createElement("div");
         wrapper.className = "item";
+        wrapper.style.marginBottom = "20px";
+        wrapper.style.borderBottom = "1px solid #eee";
+        wrapper.style.paddingBottom = "10px";
 
-        // Create and add the image
+        // Add the image
         const img = document.createElement("img");
         img.src = item.image || "https://via.placeholder.com/150";
-        img.style.width = "100%"; 
+        img.style.width = "100%";
+        img.style.height = "150px";
+        img.style.objectFit = "cover";
         img.style.borderRadius = "8px";
+        img.style.display = "block";
         img.style.marginBottom = "10px";
-        
+
         const label = document.createElement("div");
         label.style.fontWeight = "bold";
         label.textContent = item.title;
 
         const btn = document.createElement("button");
         btn.className = "btn";
+        btn.style.marginTop = "8px";
         btn.textContent = "Claim";
         btn.addEventListener("click", () => startClaimForItem(item.id));
 
