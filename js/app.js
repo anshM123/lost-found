@@ -77,7 +77,15 @@ function renderItems() {
         const wrapper = document.createElement("div");
         wrapper.className = "item";
 
+        // Create and add the image
+        const img = document.createElement("img");
+        img.src = item.image || "https://via.placeholder.com/150";
+        img.style.width = "100%"; 
+        img.style.borderRadius = "8px";
+        img.style.marginBottom = "10px";
+        
         const label = document.createElement("div");
+        label.style.fontWeight = "bold";
         label.textContent = item.title;
 
         const btn = document.createElement("button");
@@ -85,6 +93,7 @@ function renderItems() {
         btn.textContent = "Claim";
         btn.addEventListener("click", () => startClaimForItem(item.id));
 
+        wrapper.appendChild(img);
         wrapper.appendChild(label);
         wrapper.appendChild(btn);
         itemsListEl.appendChild(wrapper);
@@ -92,6 +101,7 @@ function renderItems() {
 
     populateItemSelect();
 }
+
 
 function populateItemSelect() {
     if (!itemSelectEl) return;
@@ -337,26 +347,41 @@ function handleFoundSubmit(event) {
     event.preventDefault();
 
     const title = foundTitleEl.value.trim();
-    const location = foundLocationEl.value.trim();
-    const dateFound = foundDateEl.value;
     const name = foundNameEl.value.trim();
     const contact = foundContactEl.value.trim();
-
-    clearForm();
+    const file = foundImageEl.files[0];
 
     if (!title || !name || !contact) {
         alert("Please fill in all required fields.");
         return;
     }
 
-    // Add to items
-    const newId = items.length > 0 ? Math.max(...items.map(i => i.id)) + 1 : 1;
-    items.push({
-        id: newId,
-        title,
-        claimed: false
-    });
+    const reader = new FileReader();
+    reader.onloadend = function() {
+        const newId = items.length > 0 ? Math.max(...items.map(i => i.id)) + 1 : 1;
+        
+        items.push({
+            id: newId,
+            title,
+            claimed: false,
+            image: reader.result // This is the Base64 image string
+        });
 
+        saveState();
+        alert("Item added successfully!");
+        window.location.href = "index.html";
+    };
+
+    if (file) {
+        reader.readAsDataURL(file);
+    } else {
+        // If no image was uploaded, just save with a placeholder
+        const newId = items.length > 0 ? Math.max(...items.map(i => i.id)) + 1 : 1;
+        items.push({ id: newId, title, claimed: false, image: "https://via.placeholder.com/150" });
+        saveState();
+        window.location.href = "index.html";
+    }
+}
     saveState();
     const successEl = document.getElementById("successMessage");
     if (successEl) {
