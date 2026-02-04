@@ -1,11 +1,9 @@
 // ---------------------------
 // 1. DATA & FORCED RESET
 // ---------------------------
-
-// This forces a one-time wipe to ensure the new image structure is used
-if (!localStorage.getItem("hasUpdatedImagesV3")) {
+if (!localStorage.getItem("hasUpdatedImagesV4")) {
     localStorage.clear();
-    localStorage.setItem("hasUpdatedImagesV3", "true");
+    localStorage.setItem("hasUpdatedImagesV4", "true");
 }
 
 let items = JSON.parse(localStorage.getItem("items")) || [
@@ -29,9 +27,8 @@ function saveState() {
 }
 
 // ---------------------------
-// 2. RENDERING FUNCTIONS
+// 2. USER RENDERING (Home/Claim)
 // ---------------------------
-
 function renderItems() {
     const itemsListEl = document.getElementById("itemsList");
     if (!itemsListEl) return;
@@ -41,32 +38,15 @@ function renderItems() {
     itemsListEl.style.gridTemplateColumns = "repeat(auto-fill, minmax(200px, 1fr))";
     itemsListEl.style.gap = "20px";
 
-    const availableItems = items.filter(i => i.claimed === false);
-
-    availableItems.forEach(item => {
+    items.filter(i => !i.claimed).forEach(item => {
         const wrapper = document.createElement("div");
         wrapper.className = "card";
         wrapper.style.textAlign = "center";
-
-        const img = document.createElement("img");
-        img.src = item.image;
-        img.style.width = "100%";
-        img.style.height = "150px";
-        img.style.objectFit = "cover";
-        img.style.borderRadius = "8px";
-
-        const title = document.createElement("div");
-        title.innerHTML = `<strong>${item.title}</strong>`;
-        title.style.margin = "10px 0";
-
-        const btn = document.createElement("button");
-        btn.className = "btn";
-        btn.textContent = "Claim This";
-        btn.onclick = () => { window.location.href = "claim.html"; };
-
-        wrapper.appendChild(img);
-        wrapper.appendChild(title);
-        wrapper.appendChild(btn);
+        wrapper.innerHTML = `
+            <img src="${item.image}" style="width:100%; height:150px; object-fit:cover; border-radius:8px;">
+            <div style="margin:10px 0;"><strong>${item.title}</strong></div>
+            <button class="btn" onclick="location.href='claim.html'">Claim This</button>
+        `;
         itemsListEl.appendChild(wrapper);
     });
 }
@@ -74,12 +54,8 @@ function renderItems() {
 function populateItemSelect() {
     const itemSelectEl = document.getElementById("itemSelect");
     if (!itemSelectEl) return;
-    
     itemSelectEl.innerHTML = '<option value="" disabled selected>Select an item...</option>';
-    
-    const availableItems = items.filter(i => i.claimed === false);
-    
-    availableItems.forEach(item => {
+    items.filter(i => !i.claimed).forEach(item => {
         const opt = document.createElement("option");
         opt.value = item.id;
         opt.textContent = item.title;
@@ -88,52 +64,112 @@ function populateItemSelect() {
 }
 
 // ---------------------------
-// 3. EVENT HANDLERS
+// 3. ADMIN RENDERING
 // ---------------------------
+function renderAdminDashboard() {
+    const pendingClaimsEl = document.getElementById("pendingClaims");
+    const adminItemsEl = document.getElementById("adminItems");
+    if (!pendingClaimsEl || !adminItemsEl) return;
+
+    // Render Claims
+    pendingClaimsEl.innerHTML = "<h3>Pending Claims</h3>";
+    const pending = claims.filter(c => c.status === "pending");
+    
+    if (pending.length === 0) {
+        pendingClaimsEl.innerHTML += "<p class='muted small'>No pending claims.</p>";
+    } else {
+        pending.forEach((c, index) => {
+            const item = items.find(i => i.id == c.itemId);
+            const div = document.createElement("div");
+            div.className = "item";
+            div.style.padding = "10px";
+            div.style.borderBottom = "1px solid #eee";
+            div.innerHTML = `
+                <strong>${c.name}</strong> wants <strong>${item ? item.title : 'Unknown Item'}</strong>
+                <div class="muted small">Contact: ${c.contact || 'N/A'}</div>
+                <button class="btn" onclick="approveClaim(${index})">Approve</button>
+                <button class="btn gray" onclick="rejectClaim(${index})">Reject</button>
+            `;
+            pendingClaimsEl.appendChild(div);
+        });
+    }
+
+    // Render All Items
+    adminItemsEl.innerHTML = "<h3>Inventory Management</h3>";
+    items.forEach(item => {
+        const div = document.createElement("div");
+        div.style.display = "flex";
+        div.style.alignItems = "center";
+        div.style.gap = "10px";
+        div.style.marginBottom = "5px";
+        div.innerHTML = `
+            <img src="${item.image}" style="width:40px; height:40px; object-fit:cover; border-radius:4px;">
+            <span>${item.title} - <strong>${item.claimed ? 'Claimed' : 'Available'}</strong></span>
+        `;
+        adminItemsEl.appendChild(div);
+    });
+}
+
+// ---------------------------
+// 4. ACTION HANDLERS
+// ---------------------------
+function handleLogin(event) {
+    event.preventDefault();
+    const user = document.getElementById("adminUser").value;
+    const pass = document.getElementById("adminPass").value;
+
+    if (user === "Admin" && pass === "12345678") {
+        document.getElementById("login").style.display = "none";
+        document.getElementById("admin").style.display = "block";
+        renderAdminDashboard();
+    } else {
+        alert("Incorrect credentials!");
+    }
+}
+
+function approveClaim(index) {
+    const claim = claims[index];
+    const item = items.find(i => i.id == claim.itemId);
+    if (item) item.claimed = true;
+    claim.status = "approved";
+    saveState();
+    renderAdminDashboard();
+}
+
+function rejectClaim(index) {
+    claims[index].status = "rejected";
+    saveState();
+    renderAdminDashboard();
+}
 
 function handleClaimSubmit(event) {
     event.preventDefault();
-    const itemSelectEl = document.getElementById("itemSelect");
-    const studentNameEl = document.getElementById("studentName");
-    
-    const selectedId = itemSelectEl.value;
-    if(!selectedId) return alert("Select an item first!");
-
-    const itemIndex = items.findIndex(i => i.id == selectedId);
-    if(itemIndex !== -1) items[itemIndex].claimed = true;
+    const selectedId = document.getElementById("itemSelect").value;
+    if(!selectedId) return alert("Select an item!");
 
     claims.push({
-        name: studentNameEl.value,
+        name: document.getElementById("studentName").value,
+        contact: document.getElementById("contact").value,
         itemId: selectedId,
         status: "pending"
     });
 
     saveState();
-    
     document.getElementById("claimForm").style.display = "none";
     document.getElementById("successMessage").style.display = "block";
-    setTimeout(() => { window.location.href = "index.html"; }, 2000);
+    setTimeout(() => location.href = "index.html", 2000);
 }
 
 // ---------------------------
-// 4. INITIALIZATION
+// 5. INIT
 // ---------------------------
-
 document.addEventListener("DOMContentLoaded", () => {
-    // Run these immediately when the page loads
     renderItems();
     populateItemSelect();
 
-    // Attach listeners only if the elements exist on the current page
+    const loginForm = document.getElementById("loginForm");
+    if (loginForm) loginForm.addEventListener("submit", handleLogin);
+
     const claimForm = document.getElementById("claimForm");
     if (claimForm) claimForm.addEventListener("submit", handleClaimSubmit);
-
-    const cancelBtn = document.getElementById("cancelClaim");
-    if (cancelBtn) cancelBtn.addEventListener("click", () => window.location.href = "index.html");
-
-    const refreshBtn = document.getElementById("refreshBtn");
-    if (refreshBtn) refreshBtn.addEventListener("click", () => {
-        localStorage.clear();
-        location.reload();
-    });
 });
