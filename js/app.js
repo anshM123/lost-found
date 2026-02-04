@@ -203,17 +203,25 @@ function renderAdminItems() {
         const wrapper = document.createElement("div");
         wrapper.className = "item";
 
+        // Display image in admin view too
+        const img = document.createElement("img");
+        img.src = item.image || "https://via.placeholder.com/150";
+        img.style.width = "50px"; // Smaller for admin list
+        img.style.marginRight = "10px";
+
         const info = document.createElement("div");
         info.innerHTML = `
             <strong>${item.title}</strong>
             <div class="muted small">${item.claimed ? "Status: Claimed" : "Status: Available"}</div>
         `;
 
+        wrapper.style.display = "flex";
+        wrapper.style.alignItems = "center";
+        wrapper.appendChild(img);
         wrapper.appendChild(info);
         adminItemsEl.appendChild(wrapper);
     });
 }
-
 function renderAll() {
     if (itemsListEl) renderItems();
     if (claimStatusEl) renderClaimStatus();
