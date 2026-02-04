@@ -1,3 +1,13 @@
+// ---------------------------
+// 1. DATA & FORCED RESET
+// ---------------------------
+
+// Check if we need to force a reset to show images (first-time fix)
+if (!localStorage.getItem("hasUpdatedImages")) {
+    localStorage.clear();
+    localStorage.setItem("hasUpdatedImages", "true");
+}
+
 let items = JSON.parse(localStorage.getItem("items")) || [
     { id: 1, title: "Black Backpack", claimed: false, image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=300" },
     { id: 2, title: "AirPods Case", claimed: false, image: "https://images.unsplash.com/photo-1588423770674-f285514035b3?w=300" },
@@ -19,7 +29,7 @@ function saveState() {
 }
 
 // ---------------------------
-// DOM references
+// 2. DOM REFERENCES
 // ---------------------------
 
 const itemsListEl = document.getElementById("itemsList");
@@ -45,68 +55,70 @@ const lostMessageEl = document.getElementById("lostMessage");
 const foundFormEl = document.getElementById("foundForm");
 const cancelFoundBtn = document.getElementById("cancelFound");
 const foundTitleEl = document.getElementById("foundTitle");
-const foundLocationEl = document.getElementById("foundLocation");
-const foundDateEl = document.getElementById("foundDate");
 const foundNameEl = document.getElementById("foundName");
 const foundContactEl = document.getElementById("foundContact");
-const foundMessageEl = document.getElementById("foundMessage");
 const foundImageEl = document.getElementById("foundImage");
 
-// Claim form (for claim.html)
+// Claim form 
 const studentNameEl = document.getElementById("studentName");
 const contactEl = document.getElementById("contact");
 const messageEl = document.getElementById("message");
 
 // ---------------------------
-// Rendering functions
+// 3. RENDERING FUNCTIONS
 // ---------------------------
 
 function renderItems() {
+    if (!itemsListEl) return;
     itemsListEl.innerHTML = "";
 
-    if (items.length === 0) {
-        itemsListEl.innerHTML = `<p class="muted small">No items currently in the lost & found.</p>`;
+    // Force a grid layout via JS so it's not a single column
+    itemsListEl.style.display = "grid";
+    itemsListEl.style.gridTemplateColumns = "repeat(auto-fill, minmax(180px, 1fr))";
+    itemsListEl.style.gap = "15px";
+
+    const availableItems = items.filter(i => !i.claimed);
+
+    if (availableItems.length === 0) {
+        itemsListEl.innerHTML = `<p class="muted small">No items currently available.</p>`;
         return;
     }
 
-    items.forEach(item => {
-        if (item.claimed) return;
-
+    availableItems.forEach(item => {
         const wrapper = document.createElement("div");
-        wrapper.className = "item";
-        wrapper.style.marginBottom = "20px";
-        wrapper.style.borderBottom = "1px solid #eee";
-        wrapper.style.paddingBottom = "10px";
+        wrapper.className = "item-card";
+        wrapper.style.border = "1px solid #ddd";
+        wrapper.style.padding = "10px";
+        wrapper.style.borderRadius = "8px";
+        wrapper.style.textAlign = "center";
+        wrapper.style.background = "#fff";
 
-        // Add the image
         const img = document.createElement("img");
         img.src = item.image || "https://via.placeholder.com/150";
         img.style.width = "100%";
-        img.style.height = "150px";
+        img.style.height = "120px";
         img.style.objectFit = "cover";
-        img.style.borderRadius = "8px";
-        img.style.display = "block";
-        img.style.marginBottom = "10px";
+        img.style.borderRadius = "4px";
 
-        const label = document.createElement("div");
-        label.style.fontWeight = "bold";
-        label.textContent = item.title;
+        const title = document.createElement("div");
+        title.textContent = item.title;
+        title.style.margin = "10px 0";
+        title.style.fontWeight = "bold";
 
         const btn = document.createElement("button");
         btn.className = "btn";
-        btn.style.marginTop = "8px";
         btn.textContent = "Claim";
-        btn.addEventListener("click", () => startClaimForItem(item.id));
+        btn.style.width = "100%";
+        btn.onclick = () => window.location.href = "claim.html";
 
         wrapper.appendChild(img);
-        wrapper.appendChild(label);
+        wrapper.appendChild(title);
         wrapper.appendChild(btn);
         itemsListEl.appendChild(wrapper);
     });
 
     populateItemSelect();
 }
-
 
 function populateItemSelect() {
     if (!itemSelectEl) return;
@@ -121,387 +133,68 @@ function populateItemSelect() {
 }
 
 function renderClaimStatus() {
+    if (!claimStatusEl) return;
     if (claims.length === 0) {
         claimStatusEl.textContent = "No recent claims.";
         return;
     }
-
     const latest = claims[claims.length - 1];
-    let text = "";
-
-    if (latest.type === "found") {
-        const item = items.find(i => i.id == latest.itemId);
-        const itemTitle = item ? item.title : `Item #${latest.itemId}`;
-        text = `${latest.name} submitted a claim for "${itemTitle}" — status: ${latest.status || "pending"}.`;
-    } else {
-        text = `${latest.name} reported a lost item "${latest.title}" — status: ${latest.status || "pending"}.`;
-    }
-
-    claimStatusEl.textContent = text;
-}
-
-function renderAdminClaims() {
-    pendingClaimsEl.innerHTML = "<h3>Pending Claims</h3>";
-
-    const pending = claims.filter(c => !c.status || c.status === "pending");
-
-    if (pending.length === 0) {
-        const empty = document.createElement("p");
-        empty.className = "muted small";
-        empty.textContent = "No pending claims at the moment.";
-        pendingClaimsEl.appendChild(empty);
-        return;
-    }
-
-    pending.forEach((c, index) => {
-        const wrapper = document.createElement("div");
-        wrapper.className = "item";
-
-        const info = document.createElement("div");
-
-        if (c.type === "lost") {
-            info.innerHTML = `
-                <strong>${c.name}</strong> reported <em>lost</em>: "${c.title}"
-                <div class="muted small">${c.location || "Location not specified"} · ${c.dateLost || "Date not specified"}</div>
-                <div class="muted small">${c.message || ""}</div>
-            `;
-        } else {
-            const item = items.find(i => i.id == c.itemId);
-            const itemTitle = item ? item.title : `Item #${c.itemId}`;
-            info.innerHTML = `
-                <strong>${c.name}</strong> claims: "${itemTitle}"
-                <div class="muted small">${c.message || ""}</div>
-            `;
-        }
-
-        const actions = document.createElement("div");
-        actions.className = "actions";
-
-        const approveBtn = document.createElement("button");
-        approveBtn.className = "btn";
-        approveBtn.textContent = c.type === "lost" ? "Mark Found" : "Approve";
-        approveBtn.addEventListener("click", () => approveClaim(index));
-
-        const rejectBtn = document.createElement("button");
-        rejectBtn.className = "btn gray";
-        rejectBtn.textContent = "Reject";
-        rejectBtn.addEventListener("click", () => rejectClaim(index));
-
-        actions.appendChild(approveBtn);
-        actions.appendChild(rejectBtn);
-
-        wrapper.appendChild(info);
-        wrapper.appendChild(actions);
-        pendingClaimsEl.appendChild(wrapper);
-    });
-}
-
-function renderAdminItems() {
-    adminItemsEl.innerHTML = "<h3>All Items</h3>";
-
-    if (items.length === 0) {
-        adminItemsEl.innerHTML += `<p class="muted small">No items in the system.</p>`;
-        return;
-    }
-
-    items.forEach(item => {
-        const wrapper = document.createElement("div");
-        wrapper.className = "item";
-
-        // Display image in admin view too
-        const img = document.createElement("img");
-        img.src = item.image || "https://via.placeholder.com/150";
-        img.style.width = "50px"; // Smaller for admin list
-        img.style.marginRight = "10px";
-
-        const info = document.createElement("div");
-        info.innerHTML = `
-            <strong>${item.title}</strong>
-            <div class="muted small">${item.claimed ? "Status: Claimed" : "Status: Available"}</div>
-        `;
-
-        wrapper.style.display = "flex";
-        wrapper.style.alignItems = "center";
-        wrapper.appendChild(img);
-        wrapper.appendChild(info);
-        adminItemsEl.appendChild(wrapper);
-    });
-}
-function renderAll() {
-    if (itemsListEl) renderItems();
-    if (claimStatusEl) renderClaimStatus();
+    claimStatusEl.textContent = `${latest.name} submitted a claim for an item — status: ${latest.status || "pending"}.`;
 }
 
 // ---------------------------
-// Claim flow
+// 4. HANDLERS
 // ---------------------------
 
-function startClaimForItem(itemId) {
-    window.location.href = "claim.html";
-}
+function handleFoundSubmit(event) {
+    event.preventDefault();
+    const title = foundTitleEl.value.trim();
+    const file = foundImageEl?.files[0];
 
-function toggleClaimTypeFields(type) {
-    if (type === "found") {
-        foundFieldsEl.style.display = "";
-        lostFieldsEl.style.display = "none";
-    } else {
-        foundFieldsEl.style.display = "none";
-        lostFieldsEl.style.display = "";
-    }
-}
+    const reader = new FileReader();
+    reader.onloadend = function() {
+        const newId = Date.now();
+        items.push({
+            id: newId,
+            title: title,
+            claimed: false,
+            image: file ? reader.result : "https://via.placeholder.com/150"
+        });
+        saveState();
+        window.location.href = "index.html";
+    };
 
-function clearForm() {
-    lostTitleEl.value = "";
-    lostLocationEl.value = "";
-    lostDateEl.value = "";
-    studentNameEl.value = "";
-    contactEl.value = "";
-    messageEl.value = "";
+    if (file) { reader.readAsDataURL(file); } 
+    else { reader.onloadend(); }
 }
 
 function handleClaimSubmit(event) {
     event.preventDefault();
-
-    const name = studentNameEl.value.trim();
-    const contact = contactEl.value.trim();
-    const selectedItem = itemSelectEl.value;
-
-    clearForm();
-
-    if (!name || !contact) {
-        alert("Please enter your name and contact information.");
-        return;
-    }
-
-    if (!selectedItem) {
-        alert("Please select an item to claim.");
-        return;
-    }
-
     claims.push({
-        type: "found",
-        itemId: selectedItem,
-        name,
-        contact,
-        message: messageEl.value.trim(),
-        status: "pending",
-        createdAt: new Date().toISOString()
+        name: studentNameEl.value,
+        itemId: itemSelectEl.value,
+        status: "pending"
     });
-
     saveState();
-    renderClaimStatus();
-    const successEl = document.getElementById("successMessage");
-    if (successEl) {
-        successEl.style.display = "block";
-        setTimeout(() => window.location.href = "index.html", 2000);
-    } else {
-        alert("Your claim has been submitted and is pending review.");
-        window.location.href = "index.html";
-    }
+    window.location.href = "index.html";
 }
-
-function clearForm() {
-    if (lostTitleEl) lostTitleEl.value = "";
-    if (lostLocationEl) lostLocationEl.value = "";
-    if (lostDateEl) lostDateEl.value = "";
-    if (studentNameEl) studentNameEl.value = "";
-    if (contactEl) contactEl.value = "";
-    if (messageEl) messageEl.value = "";
-    if (foundTitleEl) foundTitleEl.value = "";
-    if (foundLocationEl) foundLocationEl.value = "";
-    if (foundDateEl) foundDateEl.value = "";
-    if (foundNameEl) foundNameEl.value = "";
-    if (foundContactEl) foundContactEl.value = "";
-    if (foundMessageEl) foundMessageEl.value = "";
-    if (foundImageEl) foundImageEl.value = "";
-}
-
-function handleLostSubmit(event) {
-    event.preventDefault();
-
-    const title = lostTitleEl.value.trim();
-    const location = lostLocationEl.value.trim();
-    const dateLost = lostDateEl.value;
-    const name = lostNameEl.value.trim();
-    const contact = lostContactEl.value.trim();
-
-    clearForm();
-
-    if (!title || !name || !contact) {
-        alert("Please fill in all required fields.");
-        return;
-    }
-
-    claims.push({
-        type: "lost",
-        title,
-        location,
-        dateLost,
-        name,
-        contact,
-        message: lostMessageEl.value.trim(),
-        status: "pending",
-        createdAt: new Date().toISOString()
-    });
-
-    saveState();
-    renderClaimStatus();
-    const successEl = document.getElementById("successMessage");
-    if (successEl) {
-        successEl.style.display = "block";
-        setTimeout(() => window.location.href = "index.html", 2000);
-    } else {
-        alert("Report submitted successfully!");
-        window.location.href = "index.html";
-    }
-}
-
-function handleFoundSubmit(event) {
-    event.preventDefault();
-
-    const title = foundTitleEl.value.trim();
-    const name = foundNameEl.value.trim();
-    const contact = foundContactEl.value.trim();
-    const file = foundImageEl.files[0];
-
-    if (!title || !name || !contact) {
-        alert("Please fill in all required fields.");
-        return;
-    }
-
-    const reader = new FileReader();
-    reader.onloadend = function() {
-        const newId = items.length > 0 ? Math.max(...items.map(i => i.id)) + 1 : 1;
-        
-        items.push({
-            id: newId,
-            title,
-            claimed: false,
-            image: reader.result // This is the Base64 image string
-        });
-
-        saveState();
-        alert("Item added successfully!");
-        window.location.href = "index.html";
-    };
-
-    if (file) {
-        reader.readAsDataURL(file);
-    } else {
-        // If no image was uploaded, just save with a placeholder
-        const newId = items.length > 0 ? Math.max(...items.map(i => i.id)) + 1 : 1;
-        items.push({ id: newId, title, claimed: false, image: "https://via.placeholder.com/150" });
-        saveState();
-        window.location.href = "index.html";
-    }
-}
-    saveState();
-    const successEl = document.getElementById("successMessage");
-    if (successEl) {
-        successEl.style.display = "block";
-        setTimeout(() => window.location.href = "index.html", 2000);
-    } else {
-        alert("Your found item report has been submitted. The item is now available for claims.");
-        window.location.href = "index.html";
-    }
-}
-
-// ---------------------------
-// Admin actions
-// ---------------------------
-
-function approveClaim(index) {
-    const claim = claims[index];
-    if (!claim) return;
-
-    if (claim.type === "found") {
-        const item = items.find(i => i.id == claim.itemId);
-        if (item) item.claimed = true;
-        claim.status = "approved";
-    } else if (claim.type === "lost") {
-        claim.status = "resolved";
-    } else {
-        claim.status = "approved";
-    }
-
-    saveState();
-    renderAll();
-    renderAdminClaims();
-    renderAdminItems();
-}
-
-function rejectClaim(index) {
-    const claim = claims[index];
-    if (!claim) return;
-
-    claim.status = "rejected";
-    saveState();
-    renderClaimStatus();
-    renderAdminClaims();
-}
-
-// ---------------------------
-// Admin login
-// ---------------------------
-
-function handleLogin(event) {
-    event.preventDefault();
-    const user = document.getElementById("adminUser").value;
-    const pass = document.getElementById("adminPass").value;
-    if (user === "Admin" && pass === "12345678") {
-        document.getElementById("login").style.display = "none";
-        document.getElementById("admin").style.display = "block";
-        renderAdminClaims();
-        renderAdminItems();
-    } else {
-        alert("Incorrect username or password.");
-    }
-}
-
-// ---------------------------
-// Misc / refresh
 
 function handleRefresh() {
-    // For now, just re-render from localStorage
-    items = JSON.parse(localStorage.getItem("items")) || items;
-    claims = JSON.parse(localStorage.getItem("claims")) || claims;
-    renderAll();
-    alert("Data refreshed.");
+    localStorage.clear();
+    location.reload();
 }
 
 // ---------------------------
-// Initialization
+// 5. INIT
 // ---------------------------
 
 function init() {
-    if (claimFormEl) {
-        claimFormEl.addEventListener("submit", handleClaimSubmit);
-    }
-    if (cancelClaimBtn) {
-        cancelClaimBtn.addEventListener("click", () => window.location.href = "index.html");
-    }
-    if (lostFormEl) {
-        lostFormEl.addEventListener("submit", handleLostSubmit);
-    }
-    if (cancelLostBtn) {
-        cancelLostBtn.addEventListener("click", () => window.location.href = "index.html");
-    }
-    if (foundFormEl) {
-        foundFormEl.addEventListener("submit", handleFoundSubmit);
-    }
-    if (cancelFoundBtn) {
-        cancelFoundBtn.addEventListener("click", () => window.location.href = "index.html");
-    }
-    if (refreshBtn) {
-        refreshBtn.addEventListener("click", handleRefresh);
-    }
-    if (document.getElementById("loginForm")) {
-        document.getElementById("loginForm").addEventListener("submit", handleLogin);
-    }
-
-    renderAll();
-    populateItemSelect();
+    if (claimFormEl) claimFormEl.addEventListener("submit", handleClaimSubmit);
+    if (foundFormEl) foundFormEl.addEventListener("submit", handleFoundSubmit);
+    if (refreshBtn) refreshBtn.addEventListener("click", handleRefresh);
+    
+    renderItems();
+    renderClaimStatus();
 }
 
 document.addEventListener("DOMContentLoaded", init);
-
