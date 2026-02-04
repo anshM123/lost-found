@@ -1,16 +1,16 @@
 
-// Initial sample items if none in storage
+// Initial sample items with image placeholders
 let items = JSON.parse(localStorage.getItem("items")) || [
-    { id: 1, title: "Black Backpack", claimed: false },
-    { id: 2, title: "AirPods Case", claimed: false },
-    { id: 3, title: "Calculator", claimed: false },
-    { id: 4, title: "Water Bottle", claimed: false },
-    { id: 5, title: "Notebook", claimed: false },
-    { id: 6, title: "Phone Charger", claimed: false },
-    { id: 7, title: "Sunglasses", claimed: false },
-    { id: 8, title: "Keychain", claimed: false },
-    { id: 9, title: "Umbrella", claimed: false },
-    { id: 10, title: "Lunchbox", claimed: false }
+    { id: 1, title: "Black Backpack", claimed: false, image: "https://picsum.photos/id/160/200" },
+    { id: 2, title: "AirPods Case", claimed: false, image: "https://picsum.photos/id/1/200" },
+    { id: 3, title: "Calculator", claimed: false, image: "https://picsum.photos/id/20/200" },
+    { id: 4, title: "Water Bottle", claimed: false, image: "https://picsum.photos/id/429/200" },
+    { id: 5, title: "Notebook", claimed: false, image: "https://picsum.photos/id/24/200" },
+    { id: 6, title: "Phone Charger", claimed: false, image: "https://picsum.photos/id/0/200" },
+    { id: 7, title: "Sunglasses", claimed: false, image: "https://picsum.photos/id/64/200" },
+    { id: 8, title: "Keychain", claimed: false, image: "https://picsum.photos/id/119/200" },
+    { id: 9, title: "Umbrella", claimed: false, image: "https://picsum.photos/id/1059/200" },
+    { id: 10, title: "Lunchbox", claimed: false, image: "https://picsum.photos/id/488/200" }
 ];
 
 let claims = JSON.parse(localStorage.getItem("claims")) || [];
