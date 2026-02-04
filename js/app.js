@@ -2,10 +2,10 @@
 // 1. DATA & FORCED RESET
 // ---------------------------
 
-// Check if we need to force a reset to show images (first-time fix)
-if (!localStorage.getItem("hasUpdatedImages")) {
+// This forces a one-time wipe to ensure the new image structure is used
+if (!localStorage.getItem("hasUpdatedImagesV3")) {
     localStorage.clear();
-    localStorage.setItem("hasUpdatedImages", "true");
+    localStorage.setItem("hasUpdatedImagesV3", "true");
 }
 
 let items = JSON.parse(localStorage.getItem("items")) || [
@@ -29,102 +29,57 @@ function saveState() {
 }
 
 // ---------------------------
-// 2. DOM REFERENCES
-// ---------------------------
-
-const itemsListEl = document.getElementById("itemsList");
-const itemSelectEl = document.getElementById("itemSelect");
-const claimFormEl = document.getElementById("claimForm");
-const cancelClaimBtn = document.getElementById("cancelClaim");
-const pendingClaimsEl = document.getElementById("pendingClaims");
-const adminItemsEl = document.getElementById("adminItems");
-const refreshBtn = document.getElementById("refreshBtn");
-const claimStatusEl = document.getElementById("claimStatus");
-
-// Lost form
-const lostFormEl = document.getElementById("lostForm");
-const cancelLostBtn = document.getElementById("cancelLost");
-const lostTitleEl = document.getElementById("lostTitle");
-const lostLocationEl = document.getElementById("lostLocation");
-const lostDateEl = document.getElementById("lostDate");
-const lostNameEl = document.getElementById("lostName");
-const lostContactEl = document.getElementById("lostContact");
-const lostMessageEl = document.getElementById("lostMessage");
-
-// Found form
-const foundFormEl = document.getElementById("foundForm");
-const cancelFoundBtn = document.getElementById("cancelFound");
-const foundTitleEl = document.getElementById("foundTitle");
-const foundNameEl = document.getElementById("foundName");
-const foundContactEl = document.getElementById("foundContact");
-const foundImageEl = document.getElementById("foundImage");
-
-// Claim form 
-const studentNameEl = document.getElementById("studentName");
-const contactEl = document.getElementById("contact");
-const messageEl = document.getElementById("message");
-
-// ---------------------------
-// 3. RENDERING FUNCTIONS
+// 2. RENDERING FUNCTIONS
 // ---------------------------
 
 function renderItems() {
+    const itemsListEl = document.getElementById("itemsList");
     if (!itemsListEl) return;
+
     itemsListEl.innerHTML = "";
-
-    // Force a grid layout via JS so it's not a single column
     itemsListEl.style.display = "grid";
-    itemsListEl.style.gridTemplateColumns = "repeat(auto-fill, minmax(180px, 1fr))";
-    itemsListEl.style.gap = "15px";
+    itemsListEl.style.gridTemplateColumns = "repeat(auto-fill, minmax(200px, 1fr))";
+    itemsListEl.style.gap = "20px";
 
-    const availableItems = items.filter(i => !i.claimed);
-
-    if (availableItems.length === 0) {
-        itemsListEl.innerHTML = `<p class="muted small">No items currently available.</p>`;
-        return;
-    }
+    const availableItems = items.filter(i => i.claimed === false);
 
     availableItems.forEach(item => {
         const wrapper = document.createElement("div");
-        wrapper.className = "item-card";
-        wrapper.style.border = "1px solid #ddd";
-        wrapper.style.padding = "10px";
-        wrapper.style.borderRadius = "8px";
+        wrapper.className = "card";
         wrapper.style.textAlign = "center";
-        wrapper.style.background = "#fff";
 
         const img = document.createElement("img");
-        img.src = item.image || "https://via.placeholder.com/150";
+        img.src = item.image;
         img.style.width = "100%";
-        img.style.height = "120px";
+        img.style.height = "150px";
         img.style.objectFit = "cover";
-        img.style.borderRadius = "4px";
+        img.style.borderRadius = "8px";
 
         const title = document.createElement("div");
-        title.textContent = item.title;
+        title.innerHTML = `<strong>${item.title}</strong>`;
         title.style.margin = "10px 0";
-        title.style.fontWeight = "bold";
 
         const btn = document.createElement("button");
         btn.className = "btn";
-        btn.textContent = "Claim";
-        btn.style.width = "100%";
-        btn.onclick = () => window.location.href = "claim.html";
+        btn.textContent = "Claim This";
+        btn.onclick = () => { window.location.href = "claim.html"; };
 
         wrapper.appendChild(img);
         wrapper.appendChild(title);
         wrapper.appendChild(btn);
         itemsListEl.appendChild(wrapper);
     });
-
-    populateItemSelect();
 }
 
 function populateItemSelect() {
+    const itemSelectEl = document.getElementById("itemSelect");
     if (!itemSelectEl) return;
-    itemSelectEl.innerHTML = "";
-    items.forEach(item => {
-        if (item.claimed) return;
+    
+    itemSelectEl.innerHTML = '<option value="" disabled selected>Select an item...</option>';
+    
+    const availableItems = items.filter(i => i.claimed === false);
+    
+    availableItems.forEach(item => {
         const opt = document.createElement("option");
         opt.value = item.id;
         opt.textContent = item.title;
@@ -132,69 +87,53 @@ function populateItemSelect() {
     });
 }
 
-function renderClaimStatus() {
-    if (!claimStatusEl) return;
-    if (claims.length === 0) {
-        claimStatusEl.textContent = "No recent claims.";
-        return;
-    }
-    const latest = claims[claims.length - 1];
-    claimStatusEl.textContent = `${latest.name} submitted a claim for an item — status: ${latest.status || "pending"}.`;
-}
-
 // ---------------------------
-// 4. HANDLERS
+// 3. EVENT HANDLERS
 // ---------------------------
-
-function handleFoundSubmit(event) {
-    event.preventDefault();
-    const title = foundTitleEl.value.trim();
-    const file = foundImageEl?.files[0];
-
-    const reader = new FileReader();
-    reader.onloadend = function() {
-        const newId = Date.now();
-        items.push({
-            id: newId,
-            title: title,
-            claimed: false,
-            image: file ? reader.result : "https://via.placeholder.com/150"
-        });
-        saveState();
-        window.location.href = "index.html";
-    };
-
-    if (file) { reader.readAsDataURL(file); } 
-    else { reader.onloadend(); }
-}
 
 function handleClaimSubmit(event) {
     event.preventDefault();
+    const itemSelectEl = document.getElementById("itemSelect");
+    const studentNameEl = document.getElementById("studentName");
+    
+    const selectedId = itemSelectEl.value;
+    if(!selectedId) return alert("Select an item first!");
+
+    const itemIndex = items.findIndex(i => i.id == selectedId);
+    if(itemIndex !== -1) items[itemIndex].claimed = true;
+
     claims.push({
         name: studentNameEl.value,
-        itemId: itemSelectEl.value,
+        itemId: selectedId,
         status: "pending"
     });
+
     saveState();
-    window.location.href = "index.html";
-}
-
-function handleRefresh() {
-    localStorage.clear();
-    location.reload();
-}
-
-// ---------------------------
-// 5. INIT
-// ---------------------------
-
-function init() {
-    if (claimFormEl) claimFormEl.addEventListener("submit", handleClaimSubmit);
-    if (foundFormEl) foundFormEl.addEventListener("submit", handleFoundSubmit);
-    if (refreshBtn) refreshBtn.addEventListener("click", handleRefresh);
     
-    renderItems();
-    renderClaimStatus();
+    document.getElementById("claimForm").style.display = "none";
+    document.getElementById("successMessage").style.display = "block";
+    setTimeout(() => { window.location.href = "index.html"; }, 2000);
 }
 
-document.addEventListener("DOMContentLoaded", init);
+// ---------------------------
+// 4. INITIALIZATION
+// ---------------------------
+
+document.addEventListener("DOMContentLoaded", () => {
+    // Run these immediately when the page loads
+    renderItems();
+    populateItemSelect();
+
+    // Attach listeners only if the elements exist on the current page
+    const claimForm = document.getElementById("claimForm");
+    if (claimForm) claimForm.addEventListener("submit", handleClaimSubmit);
+
+    const cancelBtn = document.getElementById("cancelClaim");
+    if (cancelBtn) cancelBtn.addEventListener("click", () => window.location.href = "index.html");
+
+    const refreshBtn = document.getElementById("refreshBtn");
+    if (refreshBtn) refreshBtn.addEventListener("click", () => {
+        localStorage.clear();
+        location.reload();
+    });
+});
